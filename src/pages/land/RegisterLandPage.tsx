@@ -105,7 +105,7 @@ export function RegisterLandPage() {
 
               <Input
                 label="Property Size"
-                type="number"
+                type="text"
                 step="0.1"
                 value={formData.size}
                 onChange={(e) =>

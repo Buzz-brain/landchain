@@ -37,8 +37,8 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
   const quickLoginOptions = [
     { role: 'Landowner', email: 'john.landowner@example.com', description: 'Register and manage land parcels' },
     { role: 'Buyer', email: 'sarah.buyer@example.com', description: 'Search and purchase land' },
-    { role: 'Administrator', email: 'admin@landregistry.gov', description: 'Manage registrations and disputes' },
-    { role: 'Government Agent', email: 'agent@landregistry.gov', description: 'Audit and generate reports' },
+    // { role: 'Administrator', email: 'admin@landregistry.gov', description: 'Manage registrations and disputes' },
+    // { role: 'Government Agent', email: 'agent@landregistry.gov', description: 'Audit and generate reports' },
   ];
 
   return (

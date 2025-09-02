@@ -52,9 +52,12 @@ export function RegisterLandPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Register New Land</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Register New Land
+        </h1>
         <p className="text-lg text-gray-600">
-          Add your land to the blockchain registry with secure, immutable records
+          Add your land to the blockchain registry with secure, immutable
+          records
         </p>
       </div>
 
@@ -73,15 +76,24 @@ export function RegisterLandPage() {
                 <Input
                   label="Land Title"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
                   required
                   placeholder="e.g., Oakwood Estate Plot A"
                 />
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Size Unit</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Size Unit
+                  </label>
                   <select
                     value={formData.sizeUnit}
-                    onChange={(e) => setFormData({ ...formData, sizeUnit: e.target.value as any })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        sizeUnit: e.target.value as any,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="acres">Acres</option>
@@ -90,22 +102,28 @@ export function RegisterLandPage() {
                   </select>
                 </div>
               </div>
-              
+
               <Input
                 label="Property Size"
                 type="number"
                 step="0.1"
                 value={formData.size}
-                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, size: e.target.value })
+                }
                 required
-                placeholder="e.g., 2.5"
+                placeholder="e.g., 5 by 2 or 100 by 200"
               />
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Description
+                </label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                   placeholder="Additional details about the property..."
@@ -126,29 +144,41 @@ export function RegisterLandPage() {
               <Input
                 label="Property Address"
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
                 required
                 placeholder="123 Oak Street, Springfield, IL 62701"
               />
-              
+
               <div className="grid md:grid-cols-2 gap-6">
                 <Input
                   label="Latitude"
                   value={formData.coordinates.lat}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    coordinates: { ...formData.coordinates, lat: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      coordinates: {
+                        ...formData.coordinates,
+                        lat: e.target.value,
+                      },
+                    })
+                  }
                   placeholder="39.7817"
                   helperText="GPS coordinates (optional)"
                 />
                 <Input
                   label="Longitude"
                   value={formData.coordinates.lng}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    coordinates: { ...formData.coordinates, lng: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      coordinates: {
+                        ...formData.coordinates,
+                        lng: e.target.value,
+                      },
+                    })
+                  }
                   placeholder="-89.6501"
                   helperText="GPS coordinates (optional)"
                 />
@@ -167,9 +197,12 @@ export function RegisterLandPage() {
             <CardContent className="space-y-6">
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Documents</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Upload Documents
+                </h3>
                 <p className="text-gray-600 mb-4">
-                  Upload property deeds, surveys, certificates, and other supporting documents
+                  Upload property deeds, surveys, certificates, and other
+                  supporting documents
                 </p>
                 <label className="cursor-pointer">
                   <Button variant="outline" type="button">
@@ -188,16 +221,25 @@ export function RegisterLandPage() {
 
               {documents.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="font-medium text-gray-900">Uploaded Documents</h4>
+                  <h4 className="font-medium text-gray-900">
+                    Uploaded Documents
+                  </h4>
                   {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                    >
                       <div className="flex items-center space-x-3">
                         <FileText className="h-5 w-5 text-gray-400" />
                         <div>
-                          <p className="font-medium text-gray-900">{doc.name}</p>
+                          <p className="font-medium text-gray-900">
+                            {doc.name}
+                          </p>
                           <div className="flex items-center space-x-2 text-sm text-gray-600">
                             <Link className="h-3 w-3" />
-                            <span>IPFS: {doc.ipfsHash.substring(0, 10)}...</span>
+                            <span>
+                              IPFS: {doc.ipfsHash.substring(0, 10)}...
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -223,15 +265,20 @@ export function RegisterLandPage() {
                 Ready to Deploy to Blockchain
               </h3>
               <p className="text-gray-600 mb-6">
-                This will create an immutable record of your land ownership on the blockchain
+                This will create an immutable record of your land ownership on
+                the blockchain
               </p>
               <Button
                 type="submit"
                 size="lg"
                 loading={isSubmitting}
-                disabled={!formData.title || !formData.address || !formData.size}
+                disabled={
+                  !formData.title || !formData.address || !formData.size
+                }
               >
-                {isSubmitting ? 'Deploying to Blockchain...' : 'Register Land on Blockchain'}
+                {isSubmitting
+                  ? "Deploying to Blockchain..."
+                  : "Register Land on Blockchain"}
               </Button>
             </CardContent>
           </Card>
@@ -253,7 +300,8 @@ export function RegisterLandPage() {
               Your land has been successfully registered!
             </h3>
             <p className="text-gray-600 mb-4">
-              The property "{formData.title}" is now secured on the blockchain with an immutable record.
+              The property "{formData.title}" is now secured on the blockchain
+              with an immutable record.
             </p>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-1">Blockchain Hash:</p>

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { Layout } from './components/layout/Layout';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/auth/LoginPage';
@@ -20,84 +22,60 @@ import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { AuditTrailPage } from './pages/government/AuditTrailPage';
 import { LandVerificationPage } from './pages/government/LandVerificationPage';
 
-type AppState = 'landing' | 'login' | 'register' | 'dashboard';
-type PageState = string;
 
-function AppContent() {
-  const [appState, setAppState] = useState<AppState>('landing');
-  const [currentPage, setCurrentPage] = useState<PageState>('dashboard');
+function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
-
-  const handleGetStarted = () => {
-    setAppState('login');
-  };
-
-  const handleNavigate = (page: PageState) => {
-    setCurrentPage(page);
-  };
-
-  const renderPage = () => {
-    if (!isAuthenticated) {
-      switch (appState) {
-        case 'landing':
-          return <LandingPage onGetStarted={handleGetStarted} />;
-        case 'login':
-          return <LoginPage onSwitchToRegister={() => setAppState('register')} />;
-        case 'register':
-          return <RegisterPage onSwitchToLogin={() => setAppState('login')} />;
-        default:
-          return <LandingPage onGetStarted={handleGetStarted} />;
-      }
-    }
-
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard onNavigate={handleNavigate} />;
-      case 'register-land':
-        return <RegisterLandPage />;
-      case 'search-lands':
-        return <SearchLandsPage />;
-      case 'my-lands':
-        return <MyLandsPage />;
-      case 'transfer-ownership':
-        return <TransferOwnershipPage />;
-      case 'transaction-history':
-        return <TransactionHistoryPage />;
-      case 'profile':
-        return <ProfileSettingsPage />;
-      case 'my-purchases':
-        return <MyPurchasesPage />;
-      case 'pending-registrations':
-        return <PendingRegistrationsPage />;
-      case 'user-management':
-        return <UserManagementPage />;
-      case 'dispute-management':
-        return <DisputeManagementPage />;
-      case 'reports':
-        return <ReportsAnalyticsPage />;
-      case 'audit-logs':
-        return <AuditLogsPage />;
-      case 'audit-trail':
-        return <AuditTrailPage />;
-      case 'land-verification':
-        return <LandVerificationPage />;
-      default:
-        return <Dashboard onNavigate={handleNavigate} />;
-    }
-  };
-
-  return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate}>
-      {renderPage()}
-    </Layout>
-  );
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
+
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ToastProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </ToastProvider>
+  );
+}
+
+function AppRoutes() {
+  const navigate = useNavigate();
+  const handleNavigate = (page: string) => {
+    navigate(`/${page}`);
+  };
+  return (
+    <Routes>
+      <Route path="/" element={<Layout currentPage="dashboard" onNavigate={handleNavigate} />}> 
+        <Route index element={<LandingPage />} />
+        <Route path="login" element={<LoginPage onSwitchToRegister={() => { window.location.href = '/register'; }} />} />
+        <Route path="register" element={<RegisterPage onSwitchToLogin={() => { window.location.href = '/login'; }} />} />
+        <Route
+          path="dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard onNavigate={handleNavigate} />
+            </PrivateRoute>
+          }
+        />
+        <Route path="register-land" element={<PrivateRoute><RegisterLandPage /></PrivateRoute>} />
+        <Route path="search-lands" element={<PrivateRoute><SearchLandsPage /></PrivateRoute>} />
+        <Route path="my-lands" element={<PrivateRoute><MyLandsPage /></PrivateRoute>} />
+        <Route path="transfer-ownership" element={<PrivateRoute><TransferOwnershipPage /></PrivateRoute>} />
+        <Route path="transaction-history" element={<PrivateRoute><TransactionHistoryPage /></PrivateRoute>} />
+        <Route path="profile" element={<PrivateRoute><ProfileSettingsPage /></PrivateRoute>} />
+        <Route path="my-purchases" element={<PrivateRoute><MyPurchasesPage /></PrivateRoute>} />
+        <Route path="pending-registrations" element={<PrivateRoute><PendingRegistrationsPage /></PrivateRoute>} />
+        <Route path="user-management" element={<PrivateRoute><UserManagementPage /></PrivateRoute>} />
+        <Route path="dispute-management" element={<PrivateRoute><DisputeManagementPage /></PrivateRoute>} />
+        <Route path="reports" element={<PrivateRoute><ReportsAnalyticsPage /></PrivateRoute>} />
+        <Route path="audit-logs" element={<PrivateRoute><AuditLogsPage /></PrivateRoute>} />
+        <Route path="audit-trail" element={<PrivateRoute><AuditTrailPage /></PrivateRoute>} />
+        <Route path="land-verification" element={<PrivateRoute><LandVerificationPage /></PrivateRoute>} />
+      </Route>
+    </Routes>
   );
 }
 

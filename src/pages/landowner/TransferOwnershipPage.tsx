@@ -1,23 +1,46 @@
-import React, { useState } from 'react';
-import { ArrowRightLeft, Wallet, AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { ArrowRightLeft, AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
-import { mockLands } from '../../lib/mock-data';
-import { formatCurrency, formatAddress, generateMockHash } from '../../lib/utils';
+import { formatCurrency } from '../../lib/utils';
+import { useToast } from '../../context/ToastContext';
+
+// Use Vite env variable for API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export function TransferOwnershipPage() {
   const [selectedLand, setSelectedLand] = useState<any>(null);
   const [recipientAddress, setRecipientAddress] = useState('');
+  const [recipientUser, setRecipientUser] = useState<any>(null);
+  const [recipientLoading, setRecipientLoading] = useState(false);
   const [transferPrice, setTransferPrice] = useState('');
   const [isTransferring, setIsTransferring] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [transactionHash, setTransactionHash] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast ? useToast() : { showToast: () => {} };
 
-  const myLands = mockLands.filter(land => land.status === 'registered');
+  // Fetch real lands owned by the user from backend
+  const [myLands, setMyLands] = useState<any[]>([]);
+  const [landsLoading, setLandsLoading] = useState(false);
+  const [landsError, setLandsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLandsLoading(true);
+  fetch(`${API_BASE_URL}/land/owner/my-lands`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setMyLands(data?.data || []);
+        setLandsLoading(false);
+      })
+      .catch(() => {
+        setLandsError('Failed to load your lands.');
+        setLandsLoading(false);
+      });
+  }, []);
 
   const handleTransferSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,27 +48,99 @@ export function TransferOwnershipPage() {
     setShowConfirmModal(true);
   };
 
+  // For now, look up recipient by user ID (MongoDB _id)
+  // When migrating to blockchain, switch to wallet address lookup
   const confirmTransfer = async () => {
     setShowConfirmModal(false);
     setIsTransferring(true);
+    setError(null);
 
-    // Mock blockchain transaction
-    setTimeout(() => {
-      const hash = generateMockHash();
-      setTransactionHash(hash);
+    try {
+      // --- Wallet address lookup logic (for blockchain) ---
+      // const userRes = await fetch(`/api/auth/user-by-wallet/${recipientAddress}`, { ... });
+      // ...
+      // Commented out for now, using user ID lookup below
+
+      // 1. Look up recipient user by MongoDB user ID (entered in recipientAddress field for now)
+  const userRes = await fetch(`${API_BASE_URL}/auth/user/${recipientAddress}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!userRes.ok) {
+        setIsTransferring(false);
+        setError('Recipient not found. Please check the user ID.');
+        showToast && showToast('Recipient not found. Please check the user ID.', 'error');
+        return;
+      }
+      const userData = await userRes.json();
+      const recipientId = userData?.data?._id || userData?.data?.id;
+      if (!recipientId) {
+        setIsTransferring(false);
+        setError('Recipient not found.');
+        showToast && showToast('Recipient not found.', 'error');
+        return;
+      }
+
+      // 2. Call backend transfer endpoint
+  const transferRes = await fetch(`${API_BASE_URL}/land/transfer`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          landId: selectedLand._id || selectedLand.id,
+          recipientId,
+          transferPrice: transferPrice ? parseFloat(transferPrice) : undefined,
+        }),
+      });
+      const transferData = await transferRes.json();
+      if (!transferRes.ok) {
+        setIsTransferring(false);
+        setError(transferData?.message || 'Transfer failed.');
+        showToast && showToast(transferData?.message || 'Transfer failed.', 'error');
+        return;
+      }
+
+      setTransactionHash(transferData?.data?.blockchainHash || '');
       setIsTransferring(false);
       setShowSuccessModal(true);
-      
+      showToast && showToast('Land ownership transferred successfully!', 'success');
       // Reset form
       setSelectedLand(null);
       setRecipientAddress('');
       setTransferPrice('');
-    }, 3000);
+    } catch (err: any) {
+      setIsTransferring(false);
+      setError('An error occurred during transfer.');
+      showToast && showToast('An error occurred during transfer.', 'error');
+    }
   };
 
-  const isValidAddress = (address: string) => {
-    return address.startsWith('0x') && address.length === 42;
-  };
+  // Validate MongoDB ObjectId (24 hex chars)
+  const isValidObjectId = (id: string) => /^[a-fA-F0-9]{24}$/.test(id);
+
+  // Fetch recipient user info when recipientAddress changes and is valid
+  useEffect(() => {
+    if (!recipientAddress || !isValidObjectId(recipientAddress)) {
+      setRecipientUser(null);
+      return;
+    }
+    setRecipientLoading(true);
+    fetch(`${API_BASE_URL}/auth/user/${recipientAddress}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        setRecipientUser(data?.data || null);
+        setRecipientLoading(false);
+      })
+      .catch(() => {
+        setRecipientUser(null);
+        setRecipientLoading(false);
+      });
+  }, [recipientAddress]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -73,35 +168,39 @@ export function TransferOwnershipPage() {
                   <label className="block text-sm font-medium text-gray-700">
                     Select Property to Transfer
                   </label>
-                  <div className="grid gap-3">
-                    {myLands.map((land) => (
-                      <div
-                        key={land.id}
-                        className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                          selectedLand?.id === land.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => setSelectedLand(land)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-medium text-gray-900">{land.title}</h4>
-                            <p className="text-sm text-gray-600">{land.parcelId}</p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <MapPin className="h-3 w-3 text-gray-400" />
-                              <span className="text-xs text-gray-500">{land.location.address}</span>
+                  <div className="flex flex-col gap-3 max-h-64 overflow-y-auto pr-1">
+                    {myLands.map((land) => {
+                      // Support both .id and ._id for backend/legacy compatibility
+                      const landId = land._id || land.id;
+                      return (
+                        <div
+                          key={landId}
+                          className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                            selectedLand && (selectedLand._id || selectedLand.id) === landId
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setSelectedLand(land)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium text-gray-900">{land.title}</h4>
+                              <p className="text-sm text-gray-600">{land.parcelId}</p>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <MapPin className="h-3 w-3 text-gray-400" />
+                                <span className="text-xs text-gray-500">{land.location.address}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium">{land.size} {land.sizeUnit}</p>
+                              {land.price && (
+                                <p className="text-xs text-gray-600">{formatCurrency(land.price)}</p>
+                              )}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium">{land.size} {land.sizeUnit}</p>
-                            {land.price && (
-                              <p className="text-xs text-gray-600">{formatCurrency(land.price)}</p>
-                            )}
-                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   {myLands.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
@@ -111,15 +210,31 @@ export function TransferOwnershipPage() {
                 </div>
 
                 {/* Recipient Address */}
+                {/*
+                  For now, enter the recipient's MongoDB user ID. When migrating to blockchain, switch to wallet address input.
+                  Uncomment wallet address validation and placeholder as needed.
+                */}
                 <Input
-                  label="Recipient Wallet Address"
+                  label="Recipient User ID"
                   value={recipientAddress}
-                  onChange={(e) => setRecipientAddress(e.target.value)}
-                  placeholder="0x742D35CC6131B3C0E5E2F2E3F8A9B2C4F5D6E7F8"
+                  onChange={(e) => {
+                    setRecipientAddress(e.target.value);
+                    setError(null);
+                  }}
+                  placeholder="Enter recipient's user ID (MongoDB _id)"
                   required
-                  error={recipientAddress && !isValidAddress(recipientAddress) ? 'Invalid wallet address' : ''}
-                  helperText="Enter the Ethereum wallet address of the new owner"
+                  error={recipientAddress && !isValidObjectId(recipientAddress) ? 'Invalid MongoDB ObjectId' : ''}
+                  helperText="Enter the recipient's user ID for now. (Switch to wallet address after blockchain migration)"
                 />
+                {recipientLoading && (
+                  <div className="text-blue-600 text-sm">Looking up recipient...</div>
+                )}
+                {recipientUser && (
+                  <div className="text-green-700 text-sm">Recipient: <span className="font-semibold">{recipientUser.name || recipientUser.email || recipientUser._id}</span></div>
+                )}
+                {recipientAddress && isValidObjectId(recipientAddress) && !recipientLoading && !recipientUser && (
+                  <div className="text-red-600 text-sm">Recipient not found.</div>
+                )}
 
                 {/* Transfer Price */}
                 <Input
@@ -133,7 +248,7 @@ export function TransferOwnershipPage() {
                 />
 
                 {/* Gas Fee Estimation */}
-                {selectedLand && recipientAddress && isValidAddress(recipientAddress) && (
+                {selectedLand && recipientUser && (
                   <div className="bg-blue-50 rounded-lg p-4">
                     <h4 className="font-medium text-blue-900 mb-2">Transaction Summary</h4>
                     <div className="space-y-2 text-sm">
@@ -143,7 +258,11 @@ export function TransferOwnershipPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-blue-700">To:</span>
-                        <span className="text-blue-900 font-mono">{formatAddress(recipientAddress)}</span>
+                        <span className="text-blue-900 font-mono">{recipientUser.name || recipientUser.email || recipientUser._id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Recipient User ID:</span>
+                        <span className="text-blue-900 font-mono">{recipientUser._id}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-blue-700">Transfer Price:</span>
@@ -159,10 +278,13 @@ export function TransferOwnershipPage() {
                   </div>
                 )}
 
+                {error && (
+                  <div className="text-red-600 text-sm text-center">{error}</div>
+                )}
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={!selectedLand || !recipientAddress || !isValidAddress(recipientAddress)}
+                  disabled={!selectedLand || !recipientAddress || !isValidObjectId(recipientAddress) || !recipientUser || isTransferring}
                   loading={isTransferring}
                 >
                   {isTransferring ? 'Processing Transfer...' : 'Initiate Transfer'}
@@ -245,6 +367,14 @@ export function TransferOwnershipPage() {
           </Card>
         </div>
       </div>
+
+      {/* Loading and error states for lands */}
+      {landsLoading && (
+        <div className="text-center text-blue-600">Loading your lands...</div>
+      )}
+      {landsError && (
+        <div className="text-center text-red-600">{landsError}</div>
+      )}
 
       {/* Confirmation Modal */}
       <Modal

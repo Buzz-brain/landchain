@@ -14,6 +14,7 @@ export function RegisterLandPage() {
     sizeUnit: 'acres' as 'acres' | 'hectares' | 'sqft',
     coordinates: { lat: '', lng: '' },
     description: '',
+    price: '',
   });
   const [documents, setDocuments] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,6 +104,7 @@ export function RegisterLandPage() {
                 </div>
               </div>
 
+
               <Input
                 label="Property Size"
                 type="text"
@@ -113,6 +115,18 @@ export function RegisterLandPage() {
                 }
                 required
                 placeholder="e.g., 5 by 2 or 100 by 200"
+              />
+
+              <Input
+                label="Land Value (Price)"
+                type="number"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: e.target.value })
+                }
+                required
+                placeholder="e.g., 150000"
               />
 
               <div className="space-y-2">

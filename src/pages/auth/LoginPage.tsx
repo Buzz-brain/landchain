@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '../../context/ToastContext';
 import { Wallet, Lock, Mail } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -10,10 +12,13 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // Remove local success state, use toast instead
+  const { showToast } = useToast();
   
   const { login } = useAuth();
 
@@ -23,13 +28,16 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
     setError('');
 
     try {
-      const success = await login(email, password);
-      if (!success) {
+      const ok = await login(email, password);
+      if (!ok) {
         setError('Invalid email or password');
+        setIsLoading(false);
+        return;
       }
+      showToast('Login successful!', 'success');
+      navigate('/dashboard');
     } catch (err) {
       setError('Failed to login. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -37,8 +45,8 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
   const quickLoginOptions = [
     { role: 'Landowner', email: 'john.landowner@example.com', description: 'Register and manage land parcels' },
     { role: 'Buyer', email: 'sarah.buyer@example.com', description: 'Search and purchase land' },
-    // { role: 'Administrator', email: 'admin@landregistry.gov', description: 'Manage registrations and disputes' },
-    // { role: 'Government Agent', email: 'agent@landregistry.gov', description: 'Audit and generate reports' },
+    { role: 'Administrator', email: 'admin@landregistry.gov', description: 'Manage registrations and disputes' },
+    { role: 'Government Agent', email: 'agent@landregistry.gov', description: 'Audit and generate reports' },
   ];
 
   return (
@@ -55,6 +63,7 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Success toast is now global, not local */}
             <Input
               type="email"
               label="Email Address"

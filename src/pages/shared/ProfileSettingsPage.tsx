@@ -5,12 +5,12 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { formatAddress } from '../../lib/utils';
+// import { formatAddress } from '../../lib/utils';
 
 export function ProfileSettingsPage() {
   const { user, connectWallet, isWalletConnected } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  // const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -20,13 +20,13 @@ export function ProfileSettingsPage() {
     newPassword: '',
     confirmPassword: '',
   });
-  const [notifications, setNotifications] = useState({
-    emailTransactions: true,
-    emailDisputes: true,
-    emailMarketing: false,
-    pushTransactions: true,
-    pushDisputes: true,
-  });
+  // const [notifications, setNotifications] = useState({
+  //   emailTransactions: true,
+  //   emailDisputes: true,
+  //   emailMarketing: false,
+  //   pushTransactions: true,
+  //   pushDisputes: true,
+  // });
 
   const handleSave = () => {
     // Mock save functionality
@@ -56,13 +56,13 @@ export function ProfileSettingsPage() {
                 <User className="h-5 w-5 mr-2" />
                 Personal Information
               </CardTitle>
-              <Button
+              {/* <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditing(!isEditing)}
               >
                 {isEditing ? 'Cancel' : 'Edit'}
-              </Button>
+              </Button> */}
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
@@ -82,13 +82,13 @@ export function ProfileSettingsPage() {
               </div>
               
               <div className="grid md:grid-cols-2 gap-6">
-                <Input
+                {/* <Input
                   label="Phone Number"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   disabled={!isEditing}
                   placeholder="+1 (555) 123-4567"
-                />
+                /> */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Role</label>
                   <div className="flex items-center space-x-2">
@@ -100,13 +100,13 @@ export function ProfileSettingsPage() {
                 </div>
               </div>
 
-              <Input
+              {/* <Input
                 label="Address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 disabled={!isEditing}
                 placeholder="123 Main St, City, State, ZIP"
-              />
+              /> */}
 
               {isEditing && (
                 <div className="flex space-x-4 pt-4">
@@ -123,7 +123,7 @@ export function ProfileSettingsPage() {
           </Card>
 
           {/* Security Settings */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Shield className="h-5 w-5 mr-2" />
@@ -173,10 +173,10 @@ export function ProfileSettingsPage() {
                 <Button>Update Password</Button>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Notification Settings */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Bell className="h-5 w-5 mr-2" />
@@ -262,7 +262,7 @@ export function ProfileSettingsPage() {
                 <Button>Save Preferences</Button>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         {/* Sidebar */}
@@ -308,7 +308,7 @@ export function ProfileSettingsPage() {
           </Card>
 
           {/* Account Summary */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Account Summary</CardTitle>
             </CardHeader>
@@ -338,10 +338,10 @@ export function ProfileSettingsPage() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Quick Actions */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
@@ -359,7 +359,7 @@ export function ProfileSettingsPage() {
                 Update Address
               </Button>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </div>

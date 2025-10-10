@@ -1,13 +1,14 @@
-import React from 'react';
+// ...existing code...
+import { useNavigate } from 'react-router-dom';
 import { Shield, Zap, Globe, ArrowRight, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
-interface LandingPageProps {
-  onGetStarted: () => void;
-}
+// No props needed
 
-export function LandingPage({ onGetStarted }: LandingPageProps) {
+export function LandingPage() {
+  const navigate = useNavigate();
+  const handleGetStarted = () => navigate('/register');
   const features = [
     {
       icon: Shield,
@@ -47,7 +48,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               </div>
               <span className="ml-2 text-xl font-bold text-gray-900">LandRegistry</span>
             </div>
-            <Button onClick={onGetStarted}>
+            <Button onClick={handleGetStarted}>
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -68,7 +69,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               Register, verify, and transfer land ownership with complete security and transparency.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" onClick={onGetStarted}>
+              <Button size="lg" onClick={handleGetStarted}>
                 Start Managing Land
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -139,8 +140,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               <Button 
                 variant="secondary" 
                 size="lg" 
-                onClick={onGetStarted}
-                className="bg-white text-blue-600 hover:bg-gray-100"
+                onClick={handleGetStarted}
+                className="text-blue-600 hover:bg-blue-700"
               >
                 Create Your Account
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -164,7 +165,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               Securing land ownership through blockchain technology
             </p>
             <p className="text-sm text-gray-500">
-              © 2024 LandRegistry. All rights reserved.
+              © 2025 LandRegistry. All rights reserved.
             </p>
           </div>
         </div>

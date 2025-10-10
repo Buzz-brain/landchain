@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Wallet, User, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { formatAddress } from '../../lib/utils';
 
 export function Header() {
   const { user, logout, connectWallet, isWalletConnected } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleConnectWallet = async () => {
     await connectWallet();
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    showToast('Logged out successfully', 'success');
+    navigate('/login');
   };
 
   return (
@@ -35,11 +45,11 @@ export function Header() {
                   <span className="text-gray-400">({user.role.replace('-', ' ')})</span>
                 </div>
                 
-                {user.walletAddress && (
+                {user.name && (
                   <div className="flex items-center space-x-2 px-3 py-1 bg-gray-100 rounded-lg">
                     <Wallet className="h-4 w-4 text-gray-600" />
                     <span className="text-sm text-gray-700">
-                      {formatAddress(user.walletAddress)}
+                      {formatAddress(user.name)}
                     </span>
                     <div className={`w-2 h-2 rounded-full ${isWalletConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
                   </div>
@@ -52,7 +62,7 @@ export function Header() {
                   </Button>
                 )}
 
-                <Button variant="ghost" size="sm" onClick={logout}>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut className="h-4 w-4" />
                 </Button>
               </>
@@ -94,7 +104,7 @@ export function Header() {
               </Button>
             )}
 
-            <Button variant="ghost" size="sm" onClick={logout} className="w-full justify-start">
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full justify-start">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>

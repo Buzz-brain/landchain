@@ -1,14 +1,42 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Filter, Eye, Heart, DollarSign } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { Search, MapPin, Filter, Eye, Heart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
-import { mockLands } from '../../lib/mock-data';
+// import { mockLands } from '../../lib/mock-data';
 import { formatCurrency, formatDate } from '../../lib/utils';
 
 export function SearchLandsPage() {
+  const { showToast } = useToast();
+  const [initiating, setInitiating] = useState(false);
+  // Handler for initiating land purchase
+  const handleInitiatePurchase = async () => {
+    if (!selectedLand?._id && !selectedLand?.id) return;
+    setInitiating(true);
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+    try {
+      const res = await fetch(`${apiBase}/buyer/purchase`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ landId: selectedLand._id || selectedLand.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || 'Purchase initiated!', 'success');
+        setShowDetailsModal(false);
+      } else {
+        showToast(data.message || 'Failed to initiate purchase.', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to initiate purchase.', 'error');
+    } finally {
+      setInitiating(false);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLand, setSelectedLand] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -21,15 +49,43 @@ export function SearchLandsPage() {
     status: 'all',
   });
 
-  const availableLands = mockLands.filter(land => land.isForSale);
 
-  const filteredLands = availableLands.filter(land => {
+  const [lands, setLands] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch lands for sale from backend
+  React.useEffect(() => {
+    setLoading(true);
+    setError(null);
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+    fetch(`${apiBase}/buyer/lands-for-sale`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setLands(data?.data || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load lands for sale.');
+        setLoading(false);
+      });
+  }, []);
+
+  // Filtering logic
+  const filteredLands = lands.filter(land => {
     const matchesSearch = land.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         land.location.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         land.parcelId.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesFilters = true; // Simplified for demo
-    
+      land.location.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      land.parcelId.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Apply filters
+    let matchesFilters = true;
+    if (filters.minSize && Number(land.size) < Number(filters.minSize)) matchesFilters = false;
+    if (filters.maxSize && Number(land.size) > Number(filters.maxSize)) matchesFilters = false;
+    if (filters.minPrice && Number(land.price) < Number(filters.minPrice)) matchesFilters = false;
+    if (filters.maxPrice && Number(land.price) > Number(filters.maxPrice)) matchesFilters = false;
+    if (filters.sizeUnit && land.sizeUnit !== filters.sizeUnit) matchesFilters = false;
+    if (filters.status && filters.status !== 'all' && land.status !== filters.status) matchesFilters = false;
+
     return matchesSearch && matchesFilters;
   });
 
@@ -51,15 +107,12 @@ export function SearchLandsPage() {
       <Card>
         <CardContent className="p-6">
           <div className="space-y-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                placeholder="Search by title, parcel ID, or location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            <Input
+              placeholder="Search by title, parcel ID, or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              icon={<Search className="h-5 w-5" />}
+            />
 
             <div className="grid md:grid-cols-4 gap-4">
               <Input
@@ -106,9 +159,15 @@ export function SearchLandsPage() {
       </Card>
 
       {/* Results */}
+      {loading && (
+        <div className="text-center text-blue-600 py-8">Loading lands for sale...</div>
+      )}
+      {error && (
+        <div className="text-center text-red-600 py-8">{error}</div>
+      )}
       <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredLands.map((land) => (
-          <Card key={land.id} className="hover:shadow-lg transition-shadow">
+          <Card key={land._id || land.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg">{land.title}</CardTitle>
@@ -137,7 +196,6 @@ export function SearchLandsPage() {
               {land.price && (
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                   <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-emerald-600" />
                     <span className="text-lg font-bold text-emerald-600">
                       {formatCurrency(land.price)}
                     </span>
@@ -234,13 +292,17 @@ export function SearchLandsPage() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Documents</h4>
                   <div className="space-y-2">
-                    {selectedLand.documents.map((doc: any) => (
-                      <div key={doc.id} className="flex items-center space-x-2 text-sm">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-gray-700">{doc.name}</span>
-                        <Badge variant="info" className="text-xs">IPFS</Badge>
-                      </div>
-                    ))}
+                    {Array.isArray(selectedLand.documents) && selectedLand.documents.length > 0 ? (
+                      selectedLand.documents.map((doc: any, idx: number) => (
+                        <div key={doc.id || doc._id || idx} className="flex items-center space-x-2 text-sm">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-gray-700">{doc.name}</span>
+                          <Badge variant="info" className="text-xs">IPFS</Badge>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-gray-500 text-xs">No documents available</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -258,8 +320,12 @@ export function SearchLandsPage() {
                   <Badge variant="success" className="text-lg px-4 py-2">For Sale</Badge>
                 </div>
                 <div className="flex space-x-4">
-                  <Button className="flex-1">
-                    Initiate Purchase
+                  <Button
+                    className="flex-1"
+                    onClick={handleInitiatePurchase}
+                    disabled={initiating}
+                  >
+                    {initiating ? 'Initiating...' : 'Initiate Purchase'}
                   </Button>
                   <Button variant="outline">
                     Contact Owner

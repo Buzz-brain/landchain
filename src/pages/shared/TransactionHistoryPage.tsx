@@ -1,95 +1,135 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Filter, Download, ExternalLink, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { mockTransactions } from '../../lib/mock-data';
+import { useAuth } from '../../context/AuthContext';
 import { formatDate, formatAddress, formatCurrency } from '../../lib/utils';
 
 export function TransactionHistoryPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>({
+    totalTransactions: 0,
+    completed: 0,
+    pending: 0,
+    totalValue: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Extended mock data for demonstration
-  const extendedTransactions = [
-    ...mockTransactions,
-    {
-      id: 't3',
-      type: 'transfer',
-      landId: '1',
-      fromAddress: '0x742D35CC6131B3C0E5E2F2E3F8A9B2C4F5D6E7F8',
-      toAddress: '0x123A45B6C7D8E9F0A1B2C3D4E5F6G7H8I9J0K1L2',
-      amount: 125000,
-      status: 'completed',
-      timestamp: '2024-01-22T16:45:00Z',
-      blockchainHash: '0xdef456789abcdef456789abcdef456789abcdef456789abcdef456789abcdef45',
-      gasUsed: 45000,
-    },
-    {
-      id: 't4',
-      type: 'verification',
-      landId: '2',
-      toAddress: '0x742D35CC6131B3C0E5E2F2E3F8A9B2C4F5D6E7F8',
-      status: 'pending',
-      timestamp: '2024-01-23T09:30:00Z',
-      gasUsed: 18000,
-    },
-    {
-      id: 't5',
-      type: 'transfer',
-      landId: '2',
-      fromAddress: '0x742D35CC6131B3C0E5E2F2E3F8A9B2C4F5D6E7F8',
-      toAddress: '0x987F65E4D3C2B1A0F9E8D7C6B5A4F3E2D1C0B9A8',
-      amount: 250000,
-      status: 'failed',
-      timestamp: '2024-01-24T11:20:00Z',
-      gasUsed: 0,
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+        let txUrl = '', statsUrl = '';
+        if (user?.role === 'landowner') {
+          txUrl = `${apiBase}/land/transactions`;
+          statsUrl = `${apiBase}/land/transactions/stats`;
+        } else if (user?.role === 'buyer') {
+          txUrl = `${apiBase}/buyer/transactions`;
+          statsUrl = `${apiBase}/buyer/transactions/stats`;
+        }
+        const [txRes, statsRes] = await Promise.all([
+          fetch(txUrl, { credentials: "include" }),
+          fetch(statsUrl, { credentials: "include" }),
+        ]);
+        const txData = await txRes.json();
+        const statsData = await statsRes.json();
+        if (txRes.ok && Array.isArray(txData.data)) {
+          setTransactions(txData.data);
+        } else {
+          setTransactions([]);
+        }
+        if (statsRes.ok && statsData.data) {
+          setStats(statsData.data);
+        } else {
+          setStats({
+            totalTransactions: 0,
+            completed: 0,
+            pending: 0,
+            totalValue: 0,
+          });
+        }
+      } catch (err) {
+        setError("Failed to load transactions.");
+        setTransactions([]);
+        setStats({
+          totalTransactions: 0,
+          completed: 0,
+          pending: 0,
+          totalValue: 0,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user?.role === "landowner" || user?.role === "buyer") fetchData();
+  }, [user]);
 
-  const filteredTransactions = extendedTransactions.filter(transaction => {
-    const matchesSearch = transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         transaction.landId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (transaction.blockchainHash && transaction.blockchainHash.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesType = filterType === 'all' || transaction.type === filterType;
-    const matchesStatus = filterStatus === 'all' || transaction.status === filterStatus;
-    
+  const filteredTransactions = transactions.filter((transaction) => {
+    const matchesSearch =
+      transaction.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.landId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (transaction.blockchainHash &&
+        transaction.blockchainHash
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()));
+
+    const matchesType = filterType === "all" || transaction.type === filterType;
+    const matchesStatus =
+      filterStatus === "all" || transaction.status === filterStatus;
+
     return matchesSearch && matchesType && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedTransactions = filteredTransactions.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'success';
-      case 'pending': return 'warning';
-      case 'failed': return 'error';
-      default: return 'default';
+      case "completed":
+        return "success";
+      case "pending":
+        return "warning";
+      case "failed":
+        return "error";
+      default:
+        return "default";
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'registration': return '📝';
-      case 'transfer': return '🔄';
-      case 'verification': return '✅';
-      default: return '📄';
+      case "registration":
+        return "📝";
+      case "transfer":
+        return "🔄";
+      case "verification":
+        return "✅";
+      default:
+        return "📄";
     }
   };
 
   const exportTransactions = () => {
     // Mock export functionality
-    const csvContent = filteredTransactions.map(t => 
+    const csvContent = filteredTransactions.map(t =>
       `${t.id},${t.type},${t.status},${t.timestamp},${t.amount || 'N/A'},${t.blockchainHash || 'N/A'}`
     ).join('\n');
-    
+
     const blob = new Blob([`ID,Type,Status,Date,Amount,Hash\n${csvContent}`], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -98,11 +138,24 @@ export function TransactionHistoryPage() {
     a.click();
   };
 
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-gray-500">
+        Loading transactions...
+      </div>
+    );
+  }
+  if (error) {
+    return <div className="py-12 text-center text-red-500">{error}</div>;
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Transaction History</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Transaction History
+          </h1>
           <p className="text-lg text-gray-600 mt-2">
             View all your blockchain transactions and their status
           </p>
@@ -118,39 +171,38 @@ export function TransactionHistoryPage() {
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">{extendedTransactions.length}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {stats.totalTransactions}
+              </p>
               <p className="text-sm text-gray-600">Total Transactions</p>
             </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
               <p className="text-2xl font-bold text-emerald-600">
-                {extendedTransactions.filter(t => t.status === 'completed').length}
+                {stats.completed}
               </p>
               <p className="text-sm text-gray-600">Completed</p>
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
               <p className="text-2xl font-bold text-amber-600">
-                {extendedTransactions.filter(t => t.status === 'pending').length}
+                {stats.pending}
               </p>
               <p className="text-sm text-gray-600">Pending</p>
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-900">
-                {formatCurrency(extendedTransactions.reduce((sum, t) => sum + (t.amount || 0), 0))}
+                {formatCurrency(stats.totalValue)}
               </p>
               <p className="text-sm text-gray-600">Total Value</p>
             </div>
@@ -162,16 +214,13 @@ export function TransactionHistoryPage() {
       <Card>
         <CardContent className="p-6">
           <div className="grid md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search transactions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
+            <Input
+              placeholder="Search transactions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              icon={<Search className="h-4 w-4" />}
+            />
+
             <div>
               <select
                 value={filterType}
@@ -216,29 +265,54 @@ export function TransactionHistoryPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Transaction</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Type</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Amount</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Hash</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Actions</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">
+                    Transaction
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">
+                    Type
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">
+                    Amount
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">
+                    Status
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">
+                    Date
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">
+                    Hash
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr
+                    key={transaction.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-3">
-                        <span className="text-lg">{getTypeIcon(transaction.type)}</span>
+                        <span className="text-lg">
+                          {getTypeIcon(transaction.type)}
+                        </span>
                         <div>
-                          <p className="font-medium text-gray-900">{transaction.id}</p>
-                          <p className="text-sm text-gray-600">Land: {transaction.landId}</p>
+                          <p className="font-medium text-gray-900">
+                            {transaction.parcelId}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Land: {transaction.landId}
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="capitalize text-gray-700">{transaction.type}</span>
+                      <span className="capitalize text-gray-700">
+                        {transaction.type}
+                      </span>
                     </td>
                     <td className="py-4 px-4">
                       {transaction.amount ? (
@@ -250,13 +324,17 @@ export function TransactionHistoryPage() {
                       )}
                     </td>
                     <td className="py-4 px-4">
-                      <Badge variant={getStatusColor(transaction.status) as any}>
+                      <Badge
+                        variant={getStatusColor(transaction.status) as any}
+                      >
                         {transaction.status}
                       </Badge>
                     </td>
                     <td className="py-4 px-4">
                       <div>
-                        <p className="text-sm text-gray-900">{formatDate(transaction.timestamp)}</p>
+                        <p className="text-sm text-gray-900">
+                          {formatDate(transaction.timestamp)}
+                        </p>
                         <p className="text-xs text-gray-500">
                           {new Date(transaction.timestamp).toLocaleTimeString()}
                         </p>
@@ -290,8 +368,12 @@ export function TransactionHistoryPage() {
           {paginatedTransactions.length === 0 && (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No transactions found</h3>
-              <p className="text-gray-600">Try adjusting your search criteria or filters</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No transactions found
+              </h3>
+              <p className="text-gray-600">
+                Try adjusting your search criteria or filters
+              </p>
             </div>
           )}
 
@@ -299,7 +381,12 @@ export function TransactionHistoryPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
               <div className="text-sm text-gray-600">
-                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} transactions
+                Showing {startIndex + 1} to{" "}
+                {Math.min(
+                  startIndex + itemsPerPage,
+                  filteredTransactions.length
+                )}{" "}
+                of {filteredTransactions.length} transactions
               </div>
               <div className="flex space-x-2">
                 <Button
@@ -310,20 +397,24 @@ export function TransactionHistoryPage() {
                 >
                   Previous
                 </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? 'primary' : 'outline'}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "primary" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  )
+                )}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages}
                 >
                   Next

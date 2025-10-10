@@ -18,11 +18,13 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccess('');
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -31,9 +33,31 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     }
 
     try {
-      // Mock registration
-      setTimeout(() => {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+      const res = await fetch(`${apiBase}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          role: formData.role,
+        }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to create account. Please try again.');
         setIsLoading(false);
+        return;
+      }
+      setIsLoading(false);
+      setSuccess('Account created successfully! You can now sign in.');
+      setTimeout(() => {
+        setSuccess('');
         onSwitchToLogin();
       }, 2000);
     } catch (err) {
@@ -61,6 +85,11 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {success && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-700">{success}</p>
+            </div>
+          )}
           <Input
             label="Full Name"
             value={formData.name}
@@ -68,52 +97,69 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
             required
             icon={<User className="h-5 w-5 text-gray-400" />}
           />
-          
+
           <Input
             type="email"
             label="Email Address"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, email: e.target.value })
+            }
             required
             icon={<Mail className="h-5 w-5 text-gray-400" />}
           />
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Role</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Role
+            </label>
             <div className="space-y-2">
               {roleOptions.map((option) => (
-                <label key={option.value} className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                <label
+                  key={option.value}
+                  className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+                >
                   <input
                     type="radio"
                     name="role"
                     value={option.value}
                     checked={formData.role === option.value}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, role: e.target.value as any })
+                    }
                     className="mt-1"
                   />
                   <div>
-                    <div className="font-medium text-gray-900">{option.label}</div>
-                    <div className="text-sm text-gray-600">{option.description}</div>
+                    <div className="font-medium text-gray-900">
+                      {option.label}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {option.description}
+                    </div>
                   </div>
                 </label>
               ))}
             </div>
           </div>
-          
+
           <Input
             type="password"
-            label="Password"
+            label="Password (Must not be less than 8 characters)"
             value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, password: e.target.value })
+            }
             required
             icon={<Lock className="h-5 w-5 text-gray-400" />}
           />
 
           <Input
             type="password"
-            label="Confirm Password"
+            label="Confirm Password (Must not be less than 8 characters)"
             value={formData.confirmPassword}
-            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, confirmPassword: e.target.value })
+            }
             required
             icon={<UserCheck className="h-5 w-5 text-gray-400" />}
           />
@@ -131,7 +177,7 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{' '}
+            Already have an account?{" "}
             <button
               onClick={onSwitchToLogin}
               className="text-blue-700 hover:text-blue-800 font-medium"

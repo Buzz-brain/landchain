@@ -105,15 +105,15 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
             </p>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
+          {/* <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-xs text-gray-500 text-center mb-4">
               Demo: Use password "password" for any account
             </p>
-          </div>
+          </div> */}
         </Card>
 
         {/* Quick Login Options */}
-        <div className="space-y-6">
+        {/* <div className="space-y-6">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Quick Demo Access</h2>
             <p className="text-gray-600">Try different user roles instantly</p>
@@ -143,7 +143,7 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
               </Card>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

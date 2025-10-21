@@ -23,10 +23,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkSession = async () => {
       try {
+        // Use token auth if available (avoids cookie CORS issues)
         const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+        const token = window.localStorage.getItem('authToken');
+        const headers: any = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
         const res = await fetch(`${apiBase}/auth/profile`, {
           method: 'GET',
-          credentials: 'include',
+          headers,
         });
         const data = await res.json();
         if (res.ok && data.data) {
@@ -60,11 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
-        credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) {
         return false;
+      }
+      // Save token returned from server for Authorization header usage
+      if (data?.data?.token) {
+        // Lazy import to avoid circular issues
+        const { setAuthToken } = await import('../lib/api');
+        setAuthToken(data.data.token);
       }
         setUser({
           id: data.data.id || data.data._id,
@@ -83,10 +92,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       const apiBase = import.meta.env.VITE_API_BASE_URL || '';
-      await fetch(`${apiBase}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      await fetch(`${apiBase}/auth/logout`, { method: 'POST' });
+      const { setAuthToken } = await import('../lib/api');
+      setAuthToken(null);
     } catch (err) {
       // ignore
     }

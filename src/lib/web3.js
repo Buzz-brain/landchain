@@ -1,7 +1,7 @@
 // src/lib/web3.js
 
 import Web3 from 'web3';
-import LandRegistryV2 from '../../../blockchain/build/contracts/LandRegistryV2.json';
+import LandRegistryV2 from './abis/LandRegistryV2.json';
 
 
 export const getWeb3 = () => {

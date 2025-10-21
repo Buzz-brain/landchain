@@ -1,0 +1,439 @@
+{
+	"contractName": "LandRegistryV2",
+	"abi": [
+		{
+			"inputs": [],
+			"stateMutability": "nonpayable",
+			"type": "constructor"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"internalType": "uint256",
+					"name": "timestamp",
+					"type": "uint256"
+				}
+			],
+			"name": "LandDelisted",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"internalType": "uint256",
+					"name": "price",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"internalType": "uint256",
+					"name": "timestamp",
+					"type": "uint256"
+				}
+			],
+			"name": "LandListed",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				},
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "buyer",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "seller",
+					"type": "address"
+				},
+				{
+					"indexed": false,
+					"internalType": "uint256",
+					"name": "price",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"internalType": "uint256",
+					"name": "timestamp",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"internalType": "bytes32",
+					"name": "txHash",
+					"type": "bytes32"
+				}
+			],
+			"name": "LandPurchased",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				},
+				{
+					"indexed": false,
+					"internalType": "string",
+					"name": "title",
+					"type": "string"
+				},
+				{
+					"indexed": false,
+					"internalType": "string",
+					"name": "location",
+					"type": "string"
+				},
+				{
+					"indexed": false,
+					"internalType": "string",
+					"name": "size",
+					"type": "string"
+				},
+				{
+					"indexed": false,
+					"internalType": "string",
+					"name": "sizeUnit",
+					"type": "string"
+				},
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "owner",
+					"type": "address"
+				},
+				{
+					"indexed": false,
+					"internalType": "bytes32",
+					"name": "docHash",
+					"type": "bytes32"
+				},
+				{
+					"indexed": false,
+					"internalType": "string",
+					"name": "ipfsCID",
+					"type": "string"
+				},
+				{
+					"indexed": false,
+					"internalType": "uint256",
+					"name": "timestamp",
+					"type": "uint256"
+				}
+			],
+			"name": "LandRegistered",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				},
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "from",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "to",
+					"type": "address"
+				},
+				{
+					"indexed": false,
+					"internalType": "uint256",
+					"name": "timestamp",
+					"type": "uint256"
+				}
+			],
+			"name": "LandTransferred",
+			"type": "event"
+		},
+		{
+			"anonymous": false,
+			"inputs": [
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "previousOwner",
+					"type": "address"
+				},
+				{
+					"indexed": true,
+					"internalType": "address",
+					"name": "newOwner",
+					"type": "address"
+				}
+			],
+			"name": "OwnershipTransferred",
+			"type": "event"
+		},
+		{
+			"inputs": [],
+			"name": "owner",
+			"outputs": [
+				{
+					"internalType": "address",
+					"name": "",
+					"type": "address"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function",
+			"constant": true
+		},
+		{
+			"inputs": [],
+			"name": "renounceOwnership",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "newOwner",
+					"type": "address"
+				}
+			],
+			"name": "transferOwnership",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				},
+				{
+					"internalType": "string",
+					"name": "title",
+					"type": "string"
+				},
+				{
+					"internalType": "string",
+					"name": "location",
+					"type": "string"
+				},
+				{
+					"internalType": "string",
+					"name": "size",
+					"type": "string"
+				},
+				{
+					"internalType": "string",
+					"name": "sizeUnit",
+					"type": "string"
+				},
+				{
+					"internalType": "bytes32",
+					"name": "docHash",
+					"type": "bytes32"
+				},
+				{
+					"internalType": "string",
+					"name": "ipfsCID",
+					"type": "string"
+				}
+			],
+			"name": "registerLand",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				},
+				{
+					"internalType": "uint256",
+					"name": "price",
+					"type": "uint256"
+				}
+			],
+			"name": "listForSale",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				}
+			],
+			"name": "delist",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				}
+			],
+			"name": "buyLand",
+			"outputs": [],
+			"stateMutability": "payable",
+			"type": "function",
+			"payable": true
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				},
+				{
+					"internalType": "address",
+					"name": "newOwner",
+					"type": "address"
+				}
+			],
+			"name": "transferLand",
+			"outputs": [],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				}
+			],
+			"name": "getLand",
+			"outputs": [
+				{
+					"internalType": "string",
+					"name": "title",
+					"type": "string"
+				},
+				{
+					"internalType": "string",
+					"name": "location",
+					"type": "string"
+				},
+				{
+					"internalType": "string",
+					"name": "size",
+					"type": "string"
+				},
+				{
+					"internalType": "string",
+					"name": "sizeUnit",
+					"type": "string"
+				},
+				{
+					"internalType": "address",
+					"name": "currentOwner",
+					"type": "address"
+				},
+				{
+					"internalType": "uint256",
+					"name": "price",
+					"type": "uint256"
+				},
+				{
+					"internalType": "enum LandRegistryV2.LandStatus",
+					"name": "status",
+					"type": "uint8"
+				},
+				{
+					"internalType": "string",
+					"name": "ipfsCID",
+					"type": "string"
+				},
+				{
+					"internalType": "uint256",
+					"name": "registeredAt",
+					"type": "uint256"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function",
+			"constant": true
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "uint256",
+					"name": "landId",
+					"type": "uint256"
+				}
+			],
+			"name": "verifyOwnership",
+			"outputs": [
+				{
+					"internalType": "address",
+					"name": "",
+					"type": "address"
+				}
+			],
+			"stateMutability": "view",
+			"type": "function",
+			"constant": true
+		}
+	],
+	"metadata": "...",
+	"bytecode": "0x...",
+	"deployedBytecode": "0x...",
+	"networks": {
+		"5777": {
+			"address": "0xad40427F9AA524BCca481627cBf793B9f3f61ccF"
+		}
+	},
+	"schemaVersion": "3.4.16",
+	"updatedAt": "2025-10-21T00:23:11.807Z",
+	"networkType": "ethereum"
+}

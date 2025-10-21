@@ -16,12 +16,10 @@ export function SearchLandsPage() {
   const handleInitiatePurchase = async () => {
     if (!selectedLand?._id && !selectedLand?.id) return;
     setInitiating(true);
-    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
     try {
-      const res = await fetch(`${apiBase}/buyer/purchase`, {
+      const api = await import('../../lib/api');
+      const res = await api.apiFetch('/buyer/purchase', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ landId: selectedLand._id || selectedLand.id }),
       });
       const data = await res.json();
@@ -56,35 +54,40 @@ export function SearchLandsPage() {
 
   // Fetch lands for sale from backend
   React.useEffect(() => {
-    setLoading(true);
-    setError(null);
-    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
-    fetch(`${apiBase}/buyer/lands-for-sale`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const api = await import('../../lib/api');
+        const res = await api.apiFetch('/buyer/lands-for-sale');
+        const data = await res.json();
         setLands(data?.data || []);
-        setLoading(false);
-      })
-      .catch(() => {
+      } catch (err) {
         setError('Failed to load lands for sale.');
+      } finally {
         setLoading(false);
-      });
+      }
+    })();
   }, []);
 
   // Filtering logic
   const filteredLands = lands.filter(land => {
-    const matchesSearch = land.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      land.location.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      land.parcelId.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const title = String(land?.title || '').toLowerCase();
+    const address = String(land?.location?.address || '').toLowerCase();
+    const parcel = String(land?.parcelId || '').toLowerCase();
+    const matchesSearch = title.includes(q) || address.includes(q) || parcel.includes(q);
 
     // Apply filters
     let matchesFilters = true;
-    if (filters.minSize && Number(land.size) < Number(filters.minSize)) matchesFilters = false;
-    if (filters.maxSize && Number(land.size) > Number(filters.maxSize)) matchesFilters = false;
-    if (filters.minPrice && Number(land.price) < Number(filters.minPrice)) matchesFilters = false;
-    if (filters.maxPrice && Number(land.price) > Number(filters.maxPrice)) matchesFilters = false;
-    if (filters.sizeUnit && land.sizeUnit !== filters.sizeUnit) matchesFilters = false;
-    if (filters.status && filters.status !== 'all' && land.status !== filters.status) matchesFilters = false;
+    const sizeNum = Number(land?.size || 0);
+    const priceNum = Number(land?.price || 0);
+    if (filters.minSize && sizeNum < Number(filters.minSize)) matchesFilters = false;
+    if (filters.maxSize && sizeNum > Number(filters.maxSize)) matchesFilters = false;
+    if (filters.minPrice && priceNum < Number(filters.minPrice)) matchesFilters = false;
+    if (filters.maxPrice && priceNum > Number(filters.maxPrice)) matchesFilters = false;
+    if (filters.sizeUnit && land?.sizeUnit && land.sizeUnit !== filters.sizeUnit) matchesFilters = false;
+    if (filters.status && filters.status !== 'all' && land?.status !== filters.status) matchesFilters = false;
 
     return matchesSearch && matchesFilters;
   });

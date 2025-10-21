@@ -27,36 +27,38 @@ export function MyPurchasesPage() {
 
   // Fetch purchases from backend
   React.useEffect(() => {
-    setLoadingPurchases(true);
-    setErrorPurchases(null);
-    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
-    fetch(`${apiBase}/buyer/my-purchases`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
+    (async () => {
+      setLoadingPurchases(true);
+      setErrorPurchases(null);
+      try {
+        const api = await import('../../lib/api');
+        const res = await api.apiFetch('/buyer/my-purchases');
+        const data = await res.json();
         setPurchases(Array.isArray(data?.data) ? data.data : []);
-        setLoadingPurchases(false);
-      })
-      .catch(() => {
+      } catch (err) {
         setPurchases([]);
         setErrorPurchases('Failed to load purchases.');
+      } finally {
         setLoadingPurchases(false);
-      });
+      }
+    })();
   }, []);
 
   // Fetch purchase stats from backend
   React.useEffect(() => {
-    setLoadingStats(true);
-    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
-    fetch(`${apiBase}/buyer/my-purchases/stats`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
+    (async () => {
+      setLoadingStats(true);
+      try {
+        const api = await import('../../lib/api');
+        const res = await api.apiFetch('/buyer/my-purchases/stats');
+        const data = await res.json();
         if (data?.data) setStats(data.data);
-        setLoadingStats(false);
-      })
-      .catch(() => {
+      } catch (err) {
         setStats({ totalInvestment: 0, totalArea: 0, completed: 0, avgPricePerAcre: 0 });
+      } finally {
         setLoadingStats(false);
-      });
+      }
+    })();
   }, []);
 
   const filteredPurchases = purchases.filter(purchase => {

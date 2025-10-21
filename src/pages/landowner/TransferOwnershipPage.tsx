@@ -30,17 +30,20 @@ export function TransferOwnershipPage() {
   const [landsError, setLandsError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLandsLoading(true);
-  fetch(`${API_BASE_URL}/land/owner/my-lands`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
+    const load = async () => {
+      setLandsLoading(true);
+      try {
+        const api = await import('../../lib/api');
+        const res = await api.apiFetch('/land/owner/my-lands');
+        const data = await res.json();
         setMyLands(data?.data || []);
-        setLandsLoading(false);
-      })
-      .catch(() => {
+      } catch (err) {
         setLandsError('Failed to load your lands.');
+      } finally {
         setLandsLoading(false);
-      });
+      }
+    };
+    load();
   }, []);
 
   const handleTransferSubmit = (e: React.FormEvent) => {
@@ -59,11 +62,8 @@ export function TransferOwnershipPage() {
 
     try {
       // 1. Look up recipient user by wallet address
-      const userRes = await fetch(`${API_BASE_URL}/auth/user-by-wallet/${recipientAddress}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const api = await import('../../lib/api');
+      const userRes = await api.apiFetch(`/auth/user-by-wallet/${recipientAddress}`, { method: 'GET' });
       if (!userRes.ok) {
         setIsTransferring(false);
         setError('Recipient not found. Please check the wallet address.');
@@ -96,9 +96,8 @@ export function TransferOwnershipPage() {
         .send({ from: account });
 
       // 2. Notify backend so DB updates ownership
-      const transferRes = await fetch(`${API_BASE_URL}/land/transfer`, {
+      const transferRes = await api.apiFetch('/land/transfer', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           landId: Number(blockchainLandId),
@@ -134,21 +133,19 @@ export function TransferOwnershipPage() {
       return;
     }
     setRecipientLoading(true);
-    fetch(`${API_BASE_URL}/auth/user-by-wallet/${recipientAddress}`,
-      {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => {
+    (async () => {
+      try {
+        const api = await import('../../lib/api');
+        const res = await api.apiFetch(`/auth/user-by-wallet/${recipientAddress}`, { method: 'GET' });
+        if (!res.ok) throw new Error('not found');
+        const data = await res.json();
         setRecipientUser(data?.data || null);
-        setRecipientLoading(false);
-      })
-      .catch(() => {
+      } catch (err) {
         setRecipientUser(null);
+      } finally {
         setRecipientLoading(false);
-      });
+      }
+    })();
   }, [recipientAddress]);
 
   return (

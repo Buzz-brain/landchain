@@ -33,10 +33,8 @@ export function MyLandsPage() {
         setLoadingStats(true);
         try {
           const apiBase = import.meta.env.VITE_API_BASE_URL || "";
-          const res = await fetch(`${apiBase}/land/owner/stats`, {
-            method: "GET",
-            credentials: "include",
-          });
+          const api = await import('../../lib/api');
+          const res = await api.apiFetch('/land/owner/stats');
           const data = await res.json();
           if (res.ok && data.data) {
             setStats(data.data);
@@ -57,10 +55,8 @@ export function MyLandsPage() {
         setLandsError(null);
         try {
           const apiBase = import.meta.env.VITE_API_BASE_URL || "";
-          const res = await fetch(`${apiBase}/land/owner/my-lands`, {
-            method: "GET",
-            credentials: "include",
-          });
+          const api = await import('../../lib/api');
+          const res = await api.apiFetch('/land/owner/my-lands');
           const data = await res.json();
           if (res.ok && Array.isArray(data.data)) {
             setMyLands(data.data);
@@ -112,10 +108,8 @@ export function MyLandsPage() {
     setLandsError(null);
     try {
       const apiBase = import.meta.env.VITE_API_BASE_URL || "";
-      const res = await fetch(`${apiBase}/land/owner/my-lands`, {
-        method: "GET",
-        credentials: "include",
-      });
+      const api = await import('../../lib/api');
+      const res = await api.apiFetch('/land/owner/my-lands');
       const data = await res.json();
       if (res.ok && Array.isArray(data.data)) {
         setMyLands(data.data);

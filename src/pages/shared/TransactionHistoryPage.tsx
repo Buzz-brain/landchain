@@ -38,9 +38,10 @@ export function TransactionHistoryPage() {
           txUrl = `${apiBase}/buyer/transactions`;
           statsUrl = `${apiBase}/buyer/transactions/stats`;
         }
+        const api = await import('../../lib/api');
         const [txRes, statsRes] = await Promise.all([
-          fetch(txUrl, { credentials: "include" }),
-          fetch(statsUrl, { credentials: "include" }),
+          api.apiFetch(txUrl, { method: 'GET' }),
+          api.apiFetch(statsUrl, { method: 'GET' }),
         ]);
         const txData = await txRes.json();
         const statsData = await statsRes.json();

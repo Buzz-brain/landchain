@@ -49,10 +49,9 @@ export function RegisterPage({ onSwitchToLogin }: { onSwitchToLogin: () => void 
     }
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
-      const res = await fetch(`${apiBase}/auth/register`, {
+      const api = await import('../../lib/api');
+      const res = await api.apiFetch('/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -61,7 +60,6 @@ export function RegisterPage({ onSwitchToLogin }: { onSwitchToLogin: () => void 
           role: formData.role,
           walletAddress: formData.walletAddress,
         }),
-        credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) {

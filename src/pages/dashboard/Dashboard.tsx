@@ -47,10 +47,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           } else if (user.role === 'buyer') {
             url = `${apiBase}/buyer/land-stats`;
           }
-          const res = await fetch(url, {
-            method: 'GET',
-            credentials: 'include',
-          });
+          const api = await import('../../lib/api');
+          const res = await api.apiFetch(url, { method: 'GET' });
           const data = await res.json();
           if (res.ok && data.data) {
             setLandStats(data.data);
@@ -129,10 +127,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           } else if (user.role === 'buyer') {
             url = `${apiBase}/buyer/transactions`;
           }
-          const res = await fetch(url, {
-            method: 'GET',
-            credentials: 'include',
-          });
+          const api = await import('../../lib/api');
+          const res = await api.apiFetch(url, { method: 'GET' });
           const data = await res.json();
           if (res.ok && Array.isArray(data.data)) {
             setRecentTransactions(data.data.slice(0, 2));
@@ -158,10 +154,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setLoading(true);
         try {
           const apiBase = import.meta.env.VITE_API_BASE_URL || "";
-          const res = await fetch(`${apiBase}/land`, {
-            method: "GET",
-            credentials: "include",
-          });
+          const api = await import('../../lib/api');
+          const res = await api.apiFetch(`${apiBase}/land`, { method: 'GET' });
           const data = await res.json();
           if (res.ok && Array.isArray(data.data)) {
             // Only show lands owned by the current user

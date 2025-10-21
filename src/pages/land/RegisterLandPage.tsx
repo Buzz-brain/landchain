@@ -77,11 +77,8 @@ export function RegisterLandPage() {
           form.append('documents', doc.file, doc.name);
         }
       });
-      await fetch(`${apiBase}/land/register`, {
-        method: 'POST',
-        credentials: 'include',
-        body: form,
-      });
+      const api = await import('../../lib/api');
+      await api.apiFetch('/land/register', { method: 'POST', body: form });
 
       setBlockchainHash(tx.transactionHash);
       setShowSuccessModal(true);

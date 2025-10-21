@@ -61,10 +61,10 @@ export function MyPurchasesPage() {
 
   const filteredPurchases = purchases.filter(purchase => {
     const q = searchQuery.toLowerCase();
-    const title = (purchase.title || '').toLowerCase();
-    const parcelId = (purchase.parcelId || '').toLowerCase();
-    const landId = (purchase.landId || '').toLowerCase();
-    const address = (purchase.location?.address || '').toLowerCase();
+    const title = String(purchase.title || '').toLowerCase();
+    const parcelId = String(purchase.parcelId || '').toLowerCase();
+    const landId = String(purchase.landId || '').toLowerCase();
+    const address = String(purchase.location?.address || '').toLowerCase();
     return (
       title.includes(q) ||
       parcelId.includes(q) ||

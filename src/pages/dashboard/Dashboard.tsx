@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatDate } from '../../lib/utils';
 
 interface DashboardProps {
   onNavigate?: (page: string) => void;
@@ -73,7 +73,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   if (user?.role === 'landowner') {
     stats = [
       { label: 'Total Lands', value: landStats?.totalLands ?? '-', icon: MapPin, color: 'text-blue-600' },
-      { label: 'Total Value', value: typeof landStats?.totalValue === 'number' ? formatCurrency(landStats.totalValue) : '-', icon: TrendingUp, color: 'text-emerald-600' },
+  { label: 'Total Value', value: typeof landStats?.totalValue === 'number' ? `${landStats.totalValue} ETH` : '-', icon: TrendingUp, color: 'text-emerald-600' },
       { label: 'For Sale', value: landStats?.landsForSale ?? '-', icon: Clock, color: 'text-amber-600' },
       { label: 'Verified', value: landStats?.verifiedLands ?? '-', icon: Shield, color: 'text-emerald-600' },
     ];
@@ -220,7 +220,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   {land.size} {land.sizeUnit}
                 </span>
                 <span className="font-medium text-gray-900">
-                  {land.price ? formatCurrency(land.price) : "N/A"}
+                  {land.price ? `${land.price} ETH` : "N/A"}
                 </span>
               </div>
             </div>

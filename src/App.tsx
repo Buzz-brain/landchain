@@ -48,10 +48,11 @@ function AppRoutes() {
   };
   return (
     <Routes>
+      <Route path="login" element={<LoginPage onSwitchToRegister={() => { window.location.href = '/register'; }} />} />
+      <Route path="register" element={<RegisterPage onSwitchToLogin={() => { window.location.href = '/login'; }} />} />
+
       <Route path="/" element={<Layout currentPage="dashboard" onNavigate={handleNavigate} />}> 
         <Route index element={<LandingPage />} />
-        <Route path="login" element={<LoginPage onSwitchToRegister={() => { window.location.href = '/register'; }} />} />
-        <Route path="register" element={<RegisterPage onSwitchToLogin={() => { window.location.href = '/login'; }} />} />
         <Route
           path="dashboard"
           element={

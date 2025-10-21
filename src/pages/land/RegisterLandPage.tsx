@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+// TypeScript ignore for web3.js import
+// @ts-ignore
+import { getWeb3, getLandRegistryContract } from '../../lib/web3';
 import { Upload, MapPin, FileText, Link, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
-import { generateMockHash } from '../../lib/utils';
 
 export function RegisterLandPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
     address: '',
@@ -24,14 +28,68 @@ export function RegisterLandPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    try {
+      // 1. Connect to MetaMask
+      const web3 = getWeb3();
+      if (window.ethereum && window.ethereum.request) {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+      } else {
+        throw new Error('MetaMask is not available');
+      }
+      const accounts = await web3.eth.getAccounts();
+      const account = accounts[0];
+      if (!account) throw new Error('No wallet connected');
 
-    // Mock blockchain deployment
-    setTimeout(() => {
-      const hash = generateMockHash();
-      setBlockchainHash(hash);
-      setIsSubmitting(false);
+      // 2. Call the smart contract first
+      const contract = getLandRegistryContract(web3);
+      const landId = Date.now();
+      const metadataHash = web3.utils.soliditySha3(formData.title, formData.address, `LND-${landId}`);
+      // For demo, use first document's mock IPFS hash
+      const ipfsCID = documents[0]?.ipfsHash || '';
+      // Convert price from ETH to Wei
+      const priceInWei = web3.utils.toWei(formData.price, 'ether');
+      const tx = await contract.methods.registerLand(
+        landId,
+        formData.title,
+        formData.address,
+        formData.size,
+        formData.sizeUnit,
+        metadataHash,
+        ipfsCID,
+        priceInWei
+      ).send({ from: account });
+
+      // 3. Upload metadata/files to backend, including landId and blockchainHash
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+      const form = new FormData();
+      form.append('landId', landId.toString());
+      form.append('blockchainHash', tx.transactionHash);
+      form.append('title', formData.title);
+      form.append('address', formData.address);
+      form.append('size', formData.size);
+      form.append('sizeUnit', formData.sizeUnit);
+      form.append('description', formData.description);
+      form.append('price', formData.price);
+      form.append('coordinates[lat]', formData.coordinates.lat);
+      form.append('coordinates[lng]', formData.coordinates.lng);
+      documents.forEach((doc) => {
+        if (doc.file) {
+          form.append('documents', doc.file, doc.name);
+        }
+      });
+      await fetch(`${apiBase}/land/register`, {
+        method: 'POST',
+        credentials: 'include',
+        body: form,
+      });
+
+      setBlockchainHash(tx.transactionHash);
       setShowSuccessModal(true);
-    }, 3000);
+    } catch (err) {
+      setBlockchainHash('');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,15 +176,15 @@ export function RegisterLandPage() {
               />
 
               <Input
-                label="Land Value (Price)"
+                label="Land Value (Price in ETH)"
                 type="number"
-                step="0.01"
+                step="0.0001"
+                min="0"
                 value={formData.price}
-                onChange={(e) =>
-                  setFormData({ ...formData, price: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 required
-                placeholder="e.g., 150000"
+                placeholder="e.g., 1.5"
+                helperText="Enter the price in ETH."
               />
 
               <div className="space-y-2">
@@ -219,10 +277,10 @@ export function RegisterLandPage() {
                   supporting documents
                 </p>
                 <label className="cursor-pointer">
-                  <Button variant="outline" type="button">
+                  <span className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 text-sm font-medium">
                     <Plus className="h-4 w-4 mr-2" />
                     Choose Files
-                  </Button>
+                  </span>
                   <input
                     type="file"
                     multiple
@@ -324,7 +382,10 @@ export function RegisterLandPage() {
               </p>
             </div>
           </div>
-          <Button onClick={() => setShowSuccessModal(false)} className="w-full">
+          <Button onClick={() => {
+            setShowSuccessModal(false);
+            navigate('/dashboard');
+          }} className="w-full">
             Continue to Dashboard
           </Button>
         </div>

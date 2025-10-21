@@ -1,23 +1,31 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Eye, ArrowRightLeft, Calendar, DollarSign, MoreHorizontal } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, Eye, Calendar, DollarSign } from 'lucide-react';
+import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 // import { mockLands } from "../../lib/mock-data"; // remove soon
 import { useAuth } from '../../context/AuthContext';
-import { formatCurrency, formatDate, formatAddress } from '../../lib/utils';
+import { formatDate } from '../../lib/utils';
+import { getWeb3, getLandRegistryContract } from '../../lib/web3';
 
 export function MyLandsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedLand, setSelectedLand] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [myLands, setMyLands] = useState<any[]>([]);
   const [loadingLands, setLoadingLands] = useState(false);
   const [landsError, setLandsError] = useState<string | null>(null);
+  const [listPrice, setListPrice] = useState('');
+  const [listingLand, setListingLand] = useState<any>(null);
+  const [isListing, setIsListing] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.role === "landowner") {
@@ -76,9 +84,11 @@ export function MyLandsPage() {
     setShowDetailsModal(true);
   };
 
-  const initiateTransfer = (land: any) => {
-    setSelectedLand(land);
-    setShowTransferModal(true);
+  const openListModal = (land: any) => {
+    setListingLand(land);
+    setListPrice('');
+    setListError(null);
+    setShowListModal(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -95,6 +105,83 @@ export function MyLandsPage() {
         return "default";
     }
   };
+
+  // Fetch lands function (hoisted for reuse)
+  const fetchLands = async () => {
+    setLoadingLands(true);
+    setLandsError(null);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+      const res = await fetch(`${apiBase}/land/owner/my-lands`, {
+        method: "GET",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.data)) {
+        setMyLands(data.data);
+      } else {
+        setMyLands([]);
+        setLandsError("No lands found.");
+      }
+    } catch (err) {
+      setMyLands([]);
+      setLandsError("Failed to load lands.");
+    } finally {
+      setLoadingLands(false);
+    }
+  };
+
+  const handleListForSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!listingLand || !listPrice) return;
+    setIsListing(true);
+    setListError(null);
+    try {
+      const web3 = getWeb3();
+      const contract = getLandRegistryContract(web3);
+      const accounts = await web3.eth.getAccounts();
+      const account = accounts[0];
+      if (!account) throw new Error('No wallet connected');
+      // Convert price to Wei
+      const priceWei = web3.utils.toWei(listPrice, 'ether');
+      // Only use the numeric landId for contract call
+      if (!listingLand.landId) throw new Error('This land is missing a blockchain landId.');
+      const tx = await contract.methods.listForSale(listingLand.landId, priceWei).send({ from: account });
+      // Notify backend so DB updates isForSale and price
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+        await fetch(`${apiBase}/land/list-for-sale`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ landId: listingLand.landId, price: Number(listPrice), blockchainHash: tx.transactionHash })
+        });
+      } catch (notifyErr) {
+        // Non-fatal: backend update failed, but on-chain listing succeeded
+        console.error('Failed to notify backend of listing', notifyErr);
+      }
+
+      setShowListModal(false);
+      setListingLand(null);
+      setListPrice('');
+      // Refetch lands to update UI
+      fetchLands();
+    } catch (err: any) {
+      setListError(err?.message || 'Failed to list land for sale.');
+    } finally {
+      setIsListing(false);
+    }
+  };
+
+  // Auto-refresh lands after registration until all have landId
+  useEffect(() => {
+    if (!loadingLands && myLands.some(l => l.status === 'registered' && !l.landId)) {
+      const interval = setInterval(() => {
+        fetchLands();
+      }, 3000); // poll every 3 seconds
+      return () => clearInterval(interval);
+    }
+  }, [myLands, loadingLands]);
 
   return (
     <div className="space-y-8">
@@ -129,8 +216,8 @@ export function MyLandsPage() {
                   <p className="text-sm text-gray-600 mb-1">Total Value</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {user?.role === "landowner" && stats
-                      ? formatCurrency(stats.totalValue)
-                      : formatCurrency(0)}
+                      ? `${stats.totalValue} ETH`
+                      : `0 ETH`}
                   </p>
                 </div>
                 <DollarSign className="h-8 w-8 text-emerald-600" />
@@ -235,7 +322,7 @@ export function MyLandsPage() {
                     <div>
                       <p className="text-gray-500">Value</p>
                       <p className="font-medium">
-                        {land.price ? formatCurrency(land.price) : "N/A"}
+                        {land.price ? `${land.price} ETH` : "N/A"}
                       </p>
                     </div>
                     <div>
@@ -263,25 +350,18 @@ export function MyLandsPage() {
                     <Eye className="h-4 w-4 mr-2" />
                     View Details
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => initiateTransfer(land)}
-                  >
-                    <ArrowRightLeft className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => initiateTransfer(land)}
-                  >
-                    <ArrowRightLeft className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                  {/* <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button> */}
+                  {/* List for Sale button: only show if not already for sale */}
+                  {!land.isForSale && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => openListModal(land)}
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      List for Sale
+                    </Button>
+                  )}
+                  {/* ...existing Edit/Delete buttons if needed... */}
                 </div>
               </div>
             </CardContent>
@@ -300,7 +380,7 @@ export function MyLandsPage() {
             <p className="text-gray-600 mb-4">
               Start by registering your first land property
             </p>
-            <Button>Register New Land</Button>
+            <Button onClick={() => navigate('/register-land')}>Register New Land</Button>
           </CardContent>
         </Card>
       )}
@@ -337,7 +417,7 @@ export function MyLandsPage() {
                       <span className="text-gray-600">Value:</span>
                       <span className="font-medium">
                         {selectedLand.price
-                          ? formatCurrency(selectedLand.price)
+                          ? `${selectedLand.price} ETH`
                           : "N/A"}
                       </span>
                     </div>
@@ -440,12 +520,14 @@ export function MyLandsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Transfer Price (Optional)
+                  Transfer Price (ETH, Optional)
                 </label>
                 <input
                   type="number"
+                  step="0.0001"
+                  min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter amount in USD"
+                  placeholder="Enter amount in ETH"
                 />
               </div>
             </div>
@@ -469,6 +551,38 @@ export function MyLandsPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* List for Sale Modal */}
+      <Modal
+        isOpen={showListModal}
+        onClose={() => setShowListModal(false)}
+        title="List Land for Sale"
+        size="md"
+      >
+        <form onSubmit={handleListForSale} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sale Price (ETH)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.0001"
+              className="w-full border rounded px-3 py-2"
+              value={listPrice}
+              onChange={e => setListPrice(e.target.value)}
+              required
+              placeholder="Enter price in ETH"
+              disabled={isListing}
+            />
+          </div>
+          {listError && <div className="text-red-500 text-sm">{listError}</div>}
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => setShowListModal(false)} disabled={isListing}>Cancel</Button>
+            <Button type="submit" variant="primary" disabled={isListing || !listPrice}>
+              {isListing ? 'Listing...' : 'List for Sale'}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

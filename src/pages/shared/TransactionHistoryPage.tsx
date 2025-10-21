@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { formatDate, formatAddress, formatCurrency } from '../../lib/utils';
+import { formatDate, formatAddress } from '../../lib/utils';
 
 export function TransactionHistoryPage() {
   const { user } = useAuth();
@@ -202,7 +202,7 @@ export function TransactionHistoryPage() {
           <CardContent className="p-6">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-900">
-                {formatCurrency(stats.totalValue)}
+                {stats.totalValue} ETH
               </p>
               <p className="text-sm text-gray-600">Total Value</p>
             </div>
@@ -317,7 +317,7 @@ export function TransactionHistoryPage() {
                     <td className="py-4 px-4">
                       {transaction.amount ? (
                         <span className="font-medium text-gray-900">
-                          {formatCurrency(transaction.amount)}
+                          {transaction.amount} ETH
                         </span>
                       ) : (
                         <span className="text-gray-500">-</span>

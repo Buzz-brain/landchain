@@ -7,13 +7,27 @@ import { Button } from '../ui/Button';
 import { formatAddress } from '../../lib/utils';
 
 export function Header() {
-  const { user, logout, connectWallet, isWalletConnected } = useAuth();
+  const { user, logout, connectWallet, isWalletConnected, walletError } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleConnectWallet = async () => {
-    await connectWallet();
+    if (isConnecting) return;
+    setIsConnecting(true);
+    try {
+      const ok = await connectWallet();
+      if (!ok) {
+        // show error via toast if connect failed (wallet mismatch or user cancelled)
+        // keep this toast visible longer (10s)
+        showToast?.('Connected wallet does not match your account. Please connect the wallet tied to your profile.', 'error', 10000);
+        return;
+      }
+      showToast?.('Wallet connected', 'success');
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -45,20 +59,26 @@ export function Header() {
                   <span className="text-gray-400">({user.role.replace('-', ' ')})</span>
                 </div>
                 
-                {user.name && (
+                {user.walletAddress && (
                   <div className="flex items-center space-x-2 px-3 py-1 bg-gray-100 rounded-lg">
                     <Wallet className="h-4 w-4 text-gray-600" />
                     <span className="text-sm text-gray-700">
-                      {formatAddress(user.name)}
+                      {formatAddress(user.walletAddress)}
                     </span>
                     <div className={`w-2 h-2 rounded-full ${isWalletConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
                   </div>
                 )}
 
                 {!isWalletConnected && (
-                  <Button variant="outline" size="sm" onClick={handleConnectWallet}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleConnectWallet}
+                    disabled={isConnecting || isWalletConnected}
+                    title={walletError || (isConnecting ? 'Connecting...' : 'Connect the wallet tied to your account')}
+                  >
                     <Wallet className="h-4 w-4 mr-2" />
-                    Connect Wallet
+                    {isConnecting ? 'Connecting...' : 'Connect Wallet'}
                   </Button>
                 )}
 
@@ -98,9 +118,16 @@ export function Header() {
             )}
 
             {!isWalletConnected && (
-              <Button variant="outline" size="sm" onClick={handleConnectWallet} className="w-full">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleConnectWallet}
+                className="w-full"
+                disabled={isConnecting || isWalletConnected}
+                title={walletError || (isConnecting ? 'Connecting...' : 'Connect the wallet tied to your account')}
+              >
                 <Wallet className="h-4 w-4 mr-2" />
-                Connect Wallet
+                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
               </Button>
             )}
 

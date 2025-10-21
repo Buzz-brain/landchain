@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, Mail, Phone, MapPin, Wallet, Shield, Bell, Save, Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
+import { User, Wallet, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 // import { formatAddress } from '../../lib/utils';
 
 export function ProfileSettingsPage() {
-  const { user, connectWallet, isWalletConnected } = useAuth();
+  const { user, connectWallet, isWalletConnected, walletError } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   // const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -290,6 +290,11 @@ export function ProfileSettingsPage() {
                       {user.walletAddress}
                     </p>
                   </div>
+                  {walletError && (
+                    <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs text-center">
+                      {walletError}
+                    </div>
+                  )}
                   {!isWalletConnected && (
                     <Button size="sm" onClick={handleConnectWallet} className="w-full">
                       Reconnect Wallet
@@ -298,6 +303,11 @@ export function ProfileSettingsPage() {
                 </div>
               ) : (
                 <div className="text-center space-y-3">
+                  {walletError && (
+                    <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs text-center">
+                      {walletError}
+                    </div>
+                  )}
                   <p className="text-sm text-gray-600">No wallet connected</p>
                   <Button size="sm" onClick={handleConnectWallet} className="w-full">
                     Connect Wallet

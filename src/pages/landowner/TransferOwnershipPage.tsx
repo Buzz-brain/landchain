@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
-import { formatCurrency } from '../../lib/utils';
+// import { formatCurrency } from '../../lib/utils';
 import { useToast } from '../../context/ToastContext';
+import { getWeb3, getLandRegistryContract } from '../../lib/web3';
 
 // Use Vite env variable for API base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -55,22 +56,18 @@ export function TransferOwnershipPage() {
     setIsTransferring(true);
     setError(null);
 
-    try {
-      // --- Wallet address lookup logic (for blockchain) ---
-      // const userRes = await fetch(`/api/auth/user-by-wallet/${recipientAddress}`, { ... });
-      // ...
-      // Commented out for now, using user ID lookup below
 
-      // 1. Look up recipient user by MongoDB user ID (entered in recipientAddress field for now)
-  const userRes = await fetch(`${API_BASE_URL}/auth/user/${recipientAddress}`, {
+    try {
+      // 1. Look up recipient user by wallet address
+      const userRes = await fetch(`${API_BASE_URL}/auth/user-by-wallet/${recipientAddress}`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
       if (!userRes.ok) {
         setIsTransferring(false);
-        setError('Recipient not found. Please check the user ID.');
-        showToast && showToast('Recipient not found. Please check the user ID.', 'error');
+        setError('Recipient not found. Please check the wallet address.');
+        showToast && showToast('Recipient not found. Please check the wallet address.', 'error');
         return;
       }
       const userData = await userRes.json();
@@ -82,26 +79,37 @@ export function TransferOwnershipPage() {
         return;
       }
 
-      // 2. Call backend transfer endpoint
-  const transferRes = await fetch(`${API_BASE_URL}/land/transfer`, {
+      // 1. Call smart contract transferLand from MetaMask
+      const web3 = getWeb3();
+      const contract = getLandRegistryContract(web3);
+      const accounts = await web3.eth.getAccounts();
+      const account = accounts[0];
+      if (!account) throw new Error('No wallet connected');
+
+      // Ensure we have blockchain landId
+      const blockchainLandId = selectedLand.landId;
+      if (!blockchainLandId) throw new Error('This land is missing a blockchain landId.');
+
+      // Call transferLand on-chain using blockchain landId
+      const tx = await contract.methods
+        .transferLand(Number(blockchainLandId), recipientAddress)
+        .send({ from: account });
+
+      // 2. Notify backend so DB updates ownership
+      const transferRes = await fetch(`${API_BASE_URL}/land/transfer`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          landId: selectedLand._id || selectedLand.id,
-          recipientId,
-          transferPrice: transferPrice ? parseFloat(transferPrice) : undefined,
+          landId: Number(blockchainLandId),
+          newOwnerWallet: recipientAddress,
+          transferPrice: transferPrice ? Number(transferPrice) : undefined,
+          blockchainHash: tx.transactionHash,
         }),
       });
       const transferData = await transferRes.json();
-      if (!transferRes.ok) {
-        setIsTransferring(false);
-        setError(transferData?.message || 'Transfer failed.');
-        showToast && showToast(transferData?.message || 'Transfer failed.', 'error');
-        return;
-      }
 
-      setTransactionHash(transferData?.data?.blockchainHash || '');
+      setTransactionHash(transferData?.data?.blockchainHash || tx.transactionHash || '');
       setIsTransferring(false);
       setShowSuccessModal(true);
       showToast && showToast('Land ownership transferred successfully!', 'success');
@@ -116,21 +124,22 @@ export function TransferOwnershipPage() {
     }
   };
 
-  // Validate MongoDB ObjectId (24 hex chars)
-  const isValidObjectId = (id: string) => /^[a-fA-F0-9]{24}$/.test(id);
+  // Validate Ethereum address
+  const isValidWalletAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
 
-  // Fetch recipient user info when recipientAddress changes and is valid
+  // Fetch recipient user info by wallet address
   useEffect(() => {
-    if (!recipientAddress || !isValidObjectId(recipientAddress)) {
+    if (!recipientAddress || !isValidWalletAddress(recipientAddress)) {
       setRecipientUser(null);
       return;
     }
     setRecipientLoading(true);
-    fetch(`${API_BASE_URL}/auth/user/${recipientAddress}`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    fetch(`${API_BASE_URL}/auth/user-by-wallet/${recipientAddress}`,
+      {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
         setRecipientUser(data?.data || null);
@@ -194,7 +203,7 @@ export function TransferOwnershipPage() {
                             <div className="text-right">
                               <p className="text-sm font-medium">{land.size} {land.sizeUnit}</p>
                               {land.price && (
-                                <p className="text-xs text-gray-600">{formatCurrency(land.price)}</p>
+                                <p className="text-xs text-gray-600">{land.price} ETH</p>
                               )}
                             </div>
                           </div>
@@ -215,36 +224,37 @@ export function TransferOwnershipPage() {
                   Uncomment wallet address validation and placeholder as needed.
                 */}
                 <Input
-                  label="Recipient User ID"
+                  label="Recipient Wallet Address"
                   value={recipientAddress}
                   onChange={(e) => {
                     setRecipientAddress(e.target.value);
                     setError(null);
                   }}
-                  placeholder="Enter recipient's user ID (MongoDB _id)"
+                  placeholder="0x..."
                   required
-                  error={recipientAddress && !isValidObjectId(recipientAddress) ? 'Invalid MongoDB ObjectId' : ''}
-                  helperText="Enter the recipient's user ID for now. (Switch to wallet address after blockchain migration)"
+                  error={recipientAddress && !isValidWalletAddress(recipientAddress) ? 'Invalid wallet address' : ''}
+                  helperText="Enter the recipient's Ethereum wallet address."
                 />
                 {recipientLoading && (
                   <div className="text-blue-600 text-sm">Looking up recipient...</div>
                 )}
                 {recipientUser && (
-                  <div className="text-green-700 text-sm">Recipient: <span className="font-semibold">{recipientUser.name || recipientUser.email || recipientUser._id}</span></div>
+                  <div className="text-green-700 text-sm">Recipient: <span className="font-semibold">{recipientUser.name || recipientUser.email || recipientUser.walletAddress}</span></div>
                 )}
-                {recipientAddress && isValidObjectId(recipientAddress) && !recipientLoading && !recipientUser && (
+                {recipientAddress && isValidWalletAddress(recipientAddress) && !recipientLoading && !recipientUser && (
                   <div className="text-red-600 text-sm">Recipient not found.</div>
                 )}
 
                 {/* Transfer Price */}
                 <Input
-                  label="Transfer Price (Optional)"
+                  label="Transfer Price (ETH, Optional)"
                   type="number"
-                  step="0.01"
+                  step="0.0001"
+                  min="0"
                   value={transferPrice}
                   onChange={(e) => setTransferPrice(e.target.value)}
                   placeholder="0.00"
-                  helperText="Leave empty for free transfer"
+                  helperText="Enter the price in ETH. Leave empty for free transfer."
                 />
 
                 {/* Gas Fee Estimation */}
@@ -267,12 +277,12 @@ export function TransferOwnershipPage() {
                       <div className="flex justify-between">
                         <span className="text-blue-700">Transfer Price:</span>
                         <span className="text-blue-900 font-medium">
-                          {transferPrice ? formatCurrency(parseFloat(transferPrice)) : 'Free'}
+                          {transferPrice ? `${transferPrice} ETH` : 'Free'}
                         </span>
                       </div>
                       <div className="flex justify-between border-t border-blue-200 pt-2">
                         <span className="text-blue-700">Estimated Gas Fee:</span>
-                        <span className="text-blue-900 font-medium">~$12.50</span>
+                        <span className="text-blue-900 font-medium">Network fee (ETH)</span>
                       </div>
                     </div>
                   </div>
@@ -284,7 +294,7 @@ export function TransferOwnershipPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={!selectedLand || !recipientAddress || !isValidObjectId(recipientAddress) || !recipientUser || isTransferring}
+                  disabled={!selectedLand || !recipientAddress || !isValidWalletAddress(recipientAddress) || !recipientUser || isTransferring}
                   loading={isTransferring}
                 >
                   {isTransferring ? 'Processing Transfer...' : 'Initiate Transfer'}
@@ -414,7 +424,7 @@ export function TransferOwnershipPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Transfer Price:</span>
                     <span className="font-medium">
-                      {transferPrice ? formatCurrency(parseFloat(transferPrice)) : 'Free'}
+                      {transferPrice ? `${transferPrice} ETH` : 'Free'}
                     </span>
                   </div>
                 </div>
